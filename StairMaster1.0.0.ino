@@ -1,10 +1,15 @@
 #include "PriorityQueue.h"
 #include "QueueList_Modified.h"
 
+const bool DEBUG = true;
+// Maximum value for 
 const unsigned long ULONG_MAX = 4294967295;
+// Number of steps per flight
 const unsigned int NUMBER_OF_STEPS = 8;
+
 // Number of flights going up + number going down
 const unsigned int NUM_FLIGHTS = 8;
+
 const bool OFF = 0;
 const bool ON = 1;
 
@@ -37,7 +42,7 @@ class Stair {
       pinMode(uiLedPin, OUTPUT);
     }
 
-    inline bool operator < (const Stair *b) {
+    inline bool operator < (Stair *b) const {
       return uiPriority < b->getPriority();
     }
     unsigned int getPriority() {
@@ -52,7 +57,7 @@ class Stair {
     ~Stair() {}
 };
 
-bool operator < (const Stair a, const Stair b) {
+bool operator < (Stair a, Stair b) {
   return a.getPriority() < b.getPriority();
 }
 
@@ -72,7 +77,7 @@ class StairFlight {
     QueueList <Stair> queue;
 
     Stair **stairs;
-
+// Why does making these static screw everything up?
     const unsigned long INTERVAL = 200;
     const unsigned long TIME_TO_STAY_ON_FOR = 10000;
     bool bLightsOn;
@@ -91,14 +96,28 @@ class StairFlight {
 
     void turnLightsOn() {
       unsigned long now = millis();
-
+      if (DEBUG) {
+        Serial.print("Lights(");
+        Serial.print(uiSensor);
+        Serial.print(") on from ");
+        Serial.print(now);
+        Serial.print(" until: ");
+        Serial.print(now + TIME_TO_STAY_ON_FOR);
+        Serial.print("\n");
+      }
       if (bLightsOn) return;
       
       ulTimeOn = now;
       bLightsOn = true;
 
+      //Clear the queue
+
       for (unsigned int i = 0; i < NUMBER_OF_STEPS; i++) {
         stairs[i]->setPriority(now + (INTERVAL * i));
+        if (DEBUG) {
+          Serial.print("\nSetting priority: ");
+          Serial.print(now + (INTERVAL * i));
+        }
         queue.push(*stairs[i]);
       }
     }
@@ -115,19 +134,67 @@ class StairFlight {
 
     void checkSensor() {
       unsigned long now = millis();
-      if (digitalRead(uiSensor)) {
-        turnLightsOn();
-      }
       
       if (queue.count() > 0) {
-        Stair pStair = queue.peek();
-        if (now >= pStair.getPriority()) {
-          pStair.setLedState(ON);
+        Stair stair = queue.peek();
+        
+        if (now >= stair.getPriority()) {
+          if (DEBUG) {
+            Serial.print("\n*LED activated by sensor ");
+            Serial.print(uiSensor);
+            Serial.print("\nNow: ");
+            Serial.print(now);
+            Serial.print(", Priority: ");
+            Serial.print(stair.getPriority());
+            Serial.print("\n");
+          }
+          stair.setLedState(ON);
           queue.pop();
+          // return here so the queue doesn't accept more events until it's cleared out.
+          return;
         }
       }
-      
+      if (!bLightsOn && digitalRead(uiSensor)) {
+        if (DEBUG) {
+          Serial.print("\n");
+          Serial.print("Sensor: ");
+          Serial.print(uiSensor);
+          Serial.print("\n");
+    
+          Serial.print("now: ");
+          Serial.print(now);
+          Serial.print("\n");
+    
+          Serial.print("ulTimeOn: ");
+          Serial.print(ulTimeOn);
+          Serial.print("\n");
+
+          Serial.print("delta: ");
+          Serial.print(now - ulTimeOn);
+          Serial.print("\n");
+        }
+        turnLightsOn();
+        // return here so now won't be before ulTimeOn
+        return;
+      }
+           
       if (bLightsOn &&(unsigned long)(now - ulTimeOn) >= TIME_TO_STAY_ON_FOR) {
+        if (DEBUG) {
+          Serial.print("\n*** LIGHTS OUT - SENSOR ");
+          Serial.print(uiSensor);
+          Serial.print(" ***\n");
+          Serial.print(now);
+          Serial.print(" - ");
+          Serial.print(ulTimeOn);
+          Serial.print("\nnow - time on: ");
+        
+          Serial.print((unsigned long)(now - ulTimeOn));
+          Serial.print(" >= ");
+          Serial.print(TIME_TO_STAY_ON_FOR);
+          Serial.print(" = ");
+          Serial.print((unsigned long)(now - ulTimeOn) >= TIME_TO_STAY_ON_FOR);
+          Serial.print("\n\n");
+        }
         turnLightsOff();
       }
     }
@@ -181,10 +248,9 @@ void setup() {
   Serial.begin(9600);
 }
 
-// Create an instance of the
+// Create an instance of the engine to use in the event loop
 Engine *engine = new Engine();
 
 void loop() {
   engine->checkSensors();
-  delay(1);
 }
