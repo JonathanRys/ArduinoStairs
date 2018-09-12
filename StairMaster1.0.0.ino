@@ -12,9 +12,11 @@ const unsigned int NUMBER_OF_STEPS = 8;
 // Number of flights going up + number going down
 const unsigned int NUM_FLIGHTS = 8;
 
+// Ease-of-use constants
 const bool OFF = 0;
 const bool ON = 1;
 
+// A data structure representing a flight of stairs
 struct Flight {
   unsigned int sensorPin;
   unsigned int ledRange[NUMBER_OF_STEPS];
@@ -80,9 +82,11 @@ class StairFlight {
     QueueList <Stair> queue;
 
     Stair **stairs;
-// Why does making these static screw everything up?
+    
+    // Why does making these static screw everything up?
     const unsigned long INTERVAL = 200;
     const unsigned long TIME_TO_STAY_ON_FOR = 10000;
+    
     bool bLightsOn;
   public:
     StairFlight(Flight stairFlight) {
@@ -98,27 +102,27 @@ class StairFlight {
     }
 
     void turnLightsOn() {
-      unsigned long now = millis();
+      unsigned long ulNow = millis();
       if (DEBUG) {
         Serial.print("Lights(");
         Serial.print(uiSensor);
         Serial.print(") on from ");
-        Serial.print(now);
+        Serial.print(ulNow);
         Serial.print(" until: ");
-        Serial.print(now + TIME_TO_STAY_ON_FOR);
+        Serial.print(ulNow + TIME_TO_STAY_ON_FOR);
         Serial.print("\n");
       }
       if (bLightsOn) return;
       
-      ulTimeOn = now;
+      ulTimeOn = ulNow;
       bLightsOn = true;
 
       //Clear the queue
       for (unsigned int i = 0; i < NUMBER_OF_STEPS; i++) {
-        stairs[i]->setPriority(now + (INTERVAL * i));
+        stairs[i]->setPriority(ulNow + (INTERVAL * i));
         if (DEBUG) {
           Serial.print("\nSetting priority: ");
-          Serial.print(now + (INTERVAL * i));
+          Serial.print(ulNow + (INTERVAL * i));
         }
         queue.push(*stairs[i]);
       }
@@ -130,22 +134,23 @@ class StairFlight {
         stairs[i]->setPriority(0);
       }
       
-      ulTimeOn = ULONG_MAX - TIME_TO_STAY_ON_FOR;
+      ulTimeOn = 0;
       bLightsOn = false;
     }
 
+    // This is the main program loop
     void checkSensor() {
-      unsigned long now = millis();
+      unsigned long ulNow = millis();
       
       if (queue.count() > 0) {
         Stair stair = queue.peek();
         
-        if (now >= stair.getPriority()) {
+        if (ulNow >= stair.getPriority()) {
           if (DEBUG) {
             Serial.print("\n*LED activated by sensor ");
             Serial.print(uiSensor);
             Serial.print("\nNow: ");
-            Serial.print(now);
+            Serial.print(ulNow);
             Serial.print(", Priority: ");
             Serial.print(stair.getPriority());
             Serial.print("\n");
@@ -156,6 +161,7 @@ class StairFlight {
           return;
         }
       }
+      // Flip this logic if the default state of the sensor on different
       if (!bLightsOn && digitalRead(uiSensor)) {
         if (DEBUG) {
           Serial.print("\n");
@@ -163,8 +169,8 @@ class StairFlight {
           Serial.print(uiSensor);
           Serial.print("\n");
     
-          Serial.print("now: ");
-          Serial.print(now);
+          Serial.print("ulNow: ");
+          Serial.print(ulNow);
           Serial.print("\n");
     
           Serial.print("ulTimeOn: ");
@@ -172,29 +178,29 @@ class StairFlight {
           Serial.print("\n");
 
           Serial.print("delta: ");
-          Serial.print(now - ulTimeOn);
+          Serial.print(ulNow - ulTimeOn);
           Serial.print("\n");
         }
         turnLightsOn();
-        // return here so now won't be before ulTimeOn
+        // return here so "ulNow" won't ever be before "ulTimeOn"
         return;
       }
            
-      if (bLightsOn &&(unsigned long)(now - ulTimeOn) >= TIME_TO_STAY_ON_FOR) {
+      if (bLightsOn &&(unsigned long)(ulNow - ulTimeOn) >= TIME_TO_STAY_ON_FOR) {
         if (DEBUG) {
           Serial.print("\n*** LIGHTS OUT - SENSOR ");
           Serial.print(uiSensor);
           Serial.print(" ***\n");
-          Serial.print(now);
+          Serial.print(ulNow);
           Serial.print(" - ");
           Serial.print(ulTimeOn);
-          Serial.print("\nnow - time on: ");
+          Serial.print("\nulNow - time on: ");
         
-          Serial.print((unsigned long)(now - ulTimeOn));
+          Serial.print((unsigned long)(ulNow - ulTimeOn));
           Serial.print(" >= ");
           Serial.print(TIME_TO_STAY_ON_FOR);
           Serial.print(" = ");
-          Serial.print((unsigned long)(now - ulTimeOn) >= TIME_TO_STAY_ON_FOR);
+          Serial.print((unsigned long)(ulNow - ulTimeOn) >= TIME_TO_STAY_ON_FOR);
           Serial.print("\n\n");
         }
         turnLightsOff();
