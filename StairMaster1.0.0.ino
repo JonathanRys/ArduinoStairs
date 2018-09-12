@@ -57,6 +57,7 @@ class Stair {
     ~Stair() {}
 };
 
+// Overload the less-than operator for Stair types
 bool operator < (Stair a, Stair b) {
   return a.getPriority() < b.getPriority();
 }
@@ -111,7 +112,6 @@ class StairFlight {
       bLightsOn = true;
 
       //Clear the queue
-
       for (unsigned int i = 0; i < NUMBER_OF_STEPS; i++) {
         stairs[i]->setPriority(now + (INTERVAL * i));
         if (DEBUG) {
@@ -245,7 +245,9 @@ class Engine {
 // ### Main program ###
 void setup() {
   // Initialize the serial monitor:
-  Serial.begin(9600);
+  if (DEBUG) {
+      Serial.begin(9600);
+  }
 }
 
 // Create an instance of the engine to use in the event loop
