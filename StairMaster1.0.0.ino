@@ -1,8 +1,10 @@
 #include "PriorityQueue.h"
 #include "QueueList_Modified.h"
 
-const bool DEBUG = true;
-// Maximum value for 
+// Toggle debug
+const bool DEBUG = false;
+
+// Maximum value for unsigned long
 const unsigned long ULONG_MAX = 4294967295;
 // Number of steps per flight
 const unsigned int NUMBER_OF_STEPS = 8;
